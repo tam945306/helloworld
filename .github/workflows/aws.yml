@@ -77,7 +77,8 @@ jobs:
     - name: Set env
       id: export-container-name-env
       run: echo "CONTAINER_NAME=$(aws ecs list-container-instances --cluster $ECS_CLUSTER --query 'containerInstanceArns[0]' --output text)" >> $GITHUB_ENV
-      
+    - name: Test
+      run: echo $CONTAINER_NAME
     - name: Fill in the new image ID in the Amazon ECS task definition
       id: task-def
       uses: aws-actions/amazon-ecs-render-task-definition@v1
