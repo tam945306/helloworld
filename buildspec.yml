@@ -1,0 +1,49 @@
+version: 0.2
+
+env:
+  variables:
+    AWS_DEFAULT_REGION: "us-east-1"
+    ECR_REPOSITORY_URI: "774305615667.dkr.ecr.us-east-1.amazonaws.com/helloworld-react"
+  parameter-store:
+    AWS_ACCESS_KEY_ID: /ACCESS_KEY_ID
+    AWS_SECRET_ACCESS_KEY: /SECRET_ACCESS_KEY
+    
+phases:
+  install:
+    runtime-versions:
+      nodejs: 18
+    commands:
+      - export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+      - export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+      - export AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION
+      - echo Installing dependencies...
+      - npm install
+
+  pre_build:
+    commands:
+      - echo Starting build phase...
+      - npm run build
+      - echo Build completed on `date`
+
+  build:
+    commands:
+      - echo Starting post-build phase...
+      - echo Build completed successfully on `date`
+      - echo Building Docker image...
+      - echo Current directory: $(pwd)
+      - echo Directory contents:
+      - ls -la
+      - echo Building with optimized Dockerfile...
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REPOSITORY_URI
+      - docker build -f Dockerfile.optimized -t helloworld .
+      - docker tag helloworld:latest $ECR_REPOSITORY_URI/helloworld:latest
+      - docker push $ECR_REPOSITORY_URI/helloworld:latest
+      - echo Docker image pushed to ECR successfully
+      - echo Build artifacts will be available in the build/ directory
+
+artifacts:
+  files: []
+
+cache:
+  paths:
+    - 'node_modules/**/*'
