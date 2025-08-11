@@ -36,8 +36,6 @@ env:
   ECS_CLUSTER: helloworld-nextlink-ecs
   ECS_SERVICE: helloworld-service
   ECS_TASK_DEFINITION: helloworld-service
-  CONTAINER_NAME: MY_CONTAINER_NAME           # set this to the name of the container in the
-                                               # containerDefinitions section of your task definition
 
 permissions:
   contents: read
@@ -75,7 +73,11 @@ jobs:
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
-
+        
+    - name: Set env
+      id: export-container-name-env
+      run: echo "CONTAINER_NAME=$(aws ecs list-container-instances --cluster $ECS_CLUSTER --query 'containerInstanceArns[0]' --output text)" >> $GITHUB_ENV
+      
     - name: Fill in the new image ID in the Amazon ECS task definition
       id: task-def
       uses: aws-actions/amazon-ecs-render-task-definition@v1
