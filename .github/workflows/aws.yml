@@ -35,14 +35,14 @@ env:
   ECR_REPOSITORY: helloworld
   ECS_CLUSTER: helloworld-nextlink-ecs
   ECS_SERVICE: helloworld-service
-  ECS_TASK_DEFINITION: helloworld-service
+  ECS_TASK_DEFINITION: helloworld-servicw
 
 permissions:
   contents: read
 
 jobs:
-  deploy:
-    name: Deploy
+  Build:
+    name: build
     runs-on: ubuntu-latest
     environment: development
 
@@ -77,16 +77,24 @@ jobs:
     - name: Set env
       id: export-container-name-env
       run: echo "CONTAINER_NAME=$(aws ecs list-container-instances --cluster $ECS_CLUSTER --query 'containerInstanceArns[0]' --output text)" >> $GITHUB_ENV
-    - name: Test
-      run: echo $CONTAINER_NAME
+
     - name: Fill in the new image ID in the Amazon ECS task definition
       id: task-def
-      uses: aws-actions/amazon-ecs-render-task-definition@v1
-      with:
-        task-definition: ${{ env.ECS_TASK_DEFINITION }}
-        container-name: ${{ env.CONTAINER_NAME }}
-        image: ${{ steps.build-image.outputs.image }}
+      run: |
+        aws ecs describe-task-definition --task-definition helloworld-service --output json > current.json
+        jq '.containerDefinitions[0].image = "your-new-image:tag"' current.json > updated.json
 
+        aws ecs register-task-definition --cli-input-json file://updated.json
+        
+        # 4. Update service (replace NEW_REVISION with actual number)
+        aws ecs update-service --cluster helloworld-nextlink-ecs --service helloworld-service --task-definition helloworld-service:NEW_REVISION
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    environment: development
+
+    steps:
     - name: Deploy Amazon ECS task definition
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       with:
