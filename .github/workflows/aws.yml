@@ -80,15 +80,12 @@ jobs:
 
     - name: Fill in the new image ID in the Amazon ECS task definition
       id: task-def
-      run: |
-        aws ecs describe-task-definition --task-definition helloworld-service --output json > current.json
-        jq '.containerDefinitions[0].image = "your-new-image:tag"' current.json > updated.json
-
-        aws ecs register-task-definition --cli-input-json file://updated.json
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: ${{ env.ECS_TASK_DEFINITION }}
+        container-name: ${{ env.CONTAINER_NAME }}
+        image: ${{ steps.build-image.outputs.image }}
         
-        # 4. Update service (replace NEW_REVISION with actual number)
-        aws ecs update-service --cluster helloworld-nextlink-ecs --service helloworld-service --task-definition helloworld-service:NEW_REVISION
-
   deploy:
     name: Deploy
     needs: Build
